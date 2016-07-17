@@ -1,10 +1,16 @@
 package com.example;
 
+import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FilterInputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -16,7 +22,9 @@ import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.XMLEventWriter;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.events.Attribute;
 import javax.xml.stream.events.EndElement;
+import javax.xml.stream.events.Namespace;
 import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
 
@@ -29,10 +37,11 @@ public class OoXmlStrictConverter {
     private static final XMLOutputFactory XOF = XMLOutputFactory.newInstance();
 
     public static void main(String[] args) {
+        XOF.setProperty(XMLOutputFactory.IS_REPAIRING_NAMESPACES, true);
         try(ZipInputStream zis = new ZipInputStream(new FileInputStream(INPUT_FILENAME));
             ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(OUTPUT_FILENAME));) {
-            Properties mappings = new Properties();
-            mappings.load(OoXmlStrictConverter.class.getResourceAsStream("/ooxml-strict-mappings.properties"));
+            Properties mappings = readMappings();
+            System.out.println("loaded mappings entries=" + mappings.size());
             ZipEntry ze;
             while((ze = zis.getNextEntry()) != null) {
                 ZipEntry newZipEntry = new ZipEntry(ze.getName());
@@ -53,26 +62,14 @@ public class OoXmlStrictConverter {
                     XMLEvent xe = xer.nextEvent();
                     if(xe.isStartElement()) {
                         StartElement se = xe.asStartElement();
-                        String namespaceUri = se.getName().getNamespaceURI();
-                        if(namespaceUri != null && !namespaceUri.isEmpty()) {
-                            String mappedUri = mappings.getProperty(namespaceUri);
-                            if(mappedUri != null) {
-                                xe = XEF.createStartElement(
-                                        new QName(mappedUri, se.getName().getLocalPart()),
-                                        se.getAttributes(), se.getNamespaces());
-                            }
-                        }
+                        xe = XEF.createStartElement(updateQName(se.getName(), mappings),
+                                processAttributes(se.getAttributes(), mappings),
+                                processNamespaces(se.getNamespaces(), mappings));
+
                     } else if(xe.isEndElement()) {
                         EndElement ee = xe.asEndElement();
-                        String namespaceUri = ee.getName().getNamespaceURI();
-                        if(namespaceUri != null && !namespaceUri.isEmpty()) {
-                            String mappedUri = mappings.getProperty(namespaceUri);
-                            if(mappedUri != null) {
-                                xe = XEF.createEndElement(
-                                        new QName(mappedUri, ee.getName().getLocalPart()),
-                                        ee.getNamespaces());
-                            }
-                        }
+                        xe = XEF.createEndElement(updateQName(ee.getName(), mappings),
+                                processNamespaces(ee.getNamespaces(), mappings));
                     }
                     xew.add(xe);
                 }
@@ -84,5 +81,62 @@ public class OoXmlStrictConverter {
         } catch(Throwable t) {
             t.printStackTrace();
         }
+    }
+
+    private static Iterator<Attribute> processAttributes(final Iterator<Attribute> iter,
+            final Properties mappings) {
+        ArrayList<Attribute> list = new ArrayList<>();
+        while(iter.hasNext()) {
+            Attribute att = iter.next();
+            QName qn = updateQName(att.getName(), mappings);
+            String newValue = mappings.getProperty(att.getValue());
+            if(newValue == null) {
+                list.add(XEF.createAttribute(qn, att.getValue()));
+            } else {
+                list.add(XEF.createAttribute(qn, newValue));
+            }
+        }
+        return Collections.unmodifiableList(list).iterator();
+    }
+
+    private static Iterator<Namespace> processNamespaces(final Iterator<Namespace> iter,
+            final Properties mappings) {
+        ArrayList<Namespace> list = new ArrayList<>();
+        while(iter.hasNext()) {
+            Namespace ns = iter.next();
+            if(!ns.isDefaultNamespaceDeclaration() && !mappings.containsKey(ns.getNamespaceURI())) {
+                list.add(ns);
+            }
+        }
+        return Collections.unmodifiableList(list).iterator();
+    }
+
+    private static QName updateQName(QName qn, Properties mappings) {
+        String namespaceUri = qn.getNamespaceURI();
+        if(namespaceUri != null && !namespaceUri.isEmpty()) {
+            String mappedUri = mappings.getProperty(namespaceUri);
+            if(mappedUri != null) {
+                qn = new QName(mappedUri, qn.getLocalPart(), qn.getPrefix());
+            }
+        }
+        return qn;
+    }
+    
+    private static Properties readMappings() throws IOException {
+        Properties props = new Properties();
+        try(InputStream is = OoXmlStrictConverter.class.getResourceAsStream("/ooxml-strict-mappings.properties");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(is, "ISO-8859-1"))) {
+            String line;
+            while((line = reader.readLine()) != null) {
+                String[] vals = line.split("=");
+                if(vals.length >= 2) {
+                    props.setProperty(vals[0], vals[1]);
+                } else if(vals.length == 1) {
+                    props.setProperty(vals[0], "");
+                }
+
+            }
+        }
+        return props;
     }
 }
