@@ -89,12 +89,14 @@ public class OoXmlStrictConverter {
         while(iter.hasNext()) {
             Attribute att = iter.next();
             QName qn = updateQName(att.getName(), mappings);
-            String newValue = mappings.getProperty(att.getValue());
-            if(newValue == null) {
-                list.add(XEF.createAttribute(qn, att.getValue()));
-            } else {
-                list.add(XEF.createAttribute(qn, newValue));
+            String newValue = att.getValue();
+            for(String key : mappings.stringPropertyNames()) {
+                if(att.getValue().startsWith(key)) {
+                    newValue = att.getValue().replace(key, mappings.getProperty(key));
+                    break;
+                }
             }
+            list.add(XEF.createAttribute(qn, newValue));
         }
         return Collections.unmodifiableList(list).iterator();
     }
