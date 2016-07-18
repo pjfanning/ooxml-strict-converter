@@ -58,18 +58,20 @@ public class OoXmlStrictConverter {
                 };
                 XMLEventReader xer = XIF.createXMLEventReader(filterIs);
                 XMLEventWriter xew = XOF.createXMLEventWriter(filterOs);
+                int depth = 0;
                 while(xer.hasNext()) {
                     XMLEvent xe = xer.nextEvent();
                     if(xe.isStartElement()) {
                         StartElement se = xe.asStartElement();
                         xe = XEF.createStartElement(updateQName(se.getName(), mappings),
-                                processAttributes(se.getAttributes(), mappings),
+                                processAttributes(se.getAttributes(), mappings, se.getName().getNamespaceURI(), (depth == 0)),
                                 processNamespaces(se.getNamespaces(), mappings));
-
+                        depth++;
                     } else if(xe.isEndElement()) {
                         EndElement ee = xe.asEndElement();
                         xe = XEF.createEndElement(updateQName(ee.getName(), mappings),
                                 processNamespaces(ee.getNamespaces(), mappings));
+                        depth--;
                     }
                     xew.add(xe);
                 }
@@ -83,20 +85,26 @@ public class OoXmlStrictConverter {
         }
     }
 
+    private static final QName CONFORMANCE = new QName("conformance");
+    
     private static Iterator<Attribute> processAttributes(final Iterator<Attribute> iter,
-            final Properties mappings) {
+            final Properties mappings, final String elementNamespaceUri, final boolean rootElement) {
         ArrayList<Attribute> list = new ArrayList<>();
         while(iter.hasNext()) {
             Attribute att = iter.next();
             QName qn = updateQName(att.getName(), mappings);
-            String newValue = att.getValue();
-            for(String key : mappings.stringPropertyNames()) {
-                if(att.getValue().startsWith(key)) {
-                    newValue = att.getValue().replace(key, mappings.getProperty(key));
-                    break;
+            if(rootElement && mappings.containsKey(elementNamespaceUri) && att.getName().equals(CONFORMANCE)) {
+                //drop attribute
+            } else {
+                String newValue = att.getValue();
+                for(String key : mappings.stringPropertyNames()) {
+                    if(att.getValue().startsWith(key)) {
+                        newValue = att.getValue().replace(key, mappings.getProperty(key));
+                        break;
+                    }
                 }
+                list.add(XEF.createAttribute(qn, newValue));
             }
-            list.add(XEF.createAttribute(qn, newValue));
         }
         return Collections.unmodifiableList(list).iterator();
     }
@@ -115,10 +123,11 @@ public class OoXmlStrictConverter {
 
     private static QName updateQName(QName qn, Properties mappings) {
         String namespaceUri = qn.getNamespaceURI();
-        if(namespaceUri != null && !namespaceUri.isEmpty()) {
+        if(isNotBlank(namespaceUri)) {
             String mappedUri = mappings.getProperty(namespaceUri);
             if(mappedUri != null) {
-                qn = new QName(mappedUri, qn.getLocalPart(), qn.getPrefix());
+                qn = isBlank(qn.getPrefix()) ? new QName(mappedUri, qn.getLocalPart())
+                        : new QName(mappedUri, qn.getLocalPart(), qn.getPrefix());
             }
         }
         return qn;
@@ -140,5 +149,13 @@ public class OoXmlStrictConverter {
             }
         }
         return props;
+    }
+    
+    private static boolean isBlank(final String str) {
+        return str == null || str.trim().length() == 0;
+    }
+
+    private static boolean isNotBlank(final String str) {
+        return !isBlank(str);
     }
 }

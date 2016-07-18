@@ -3,5 +3,9 @@ Early prototype code to take Strict OOXML files and save them using the more por
 
 When I have fixed a few issues, I will tidy up the code.
 
-## Issues
-* Handle Type attributes containing Strict OOXML formatted URIs, eg Relationship Type="http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument"
+## Current Algorithm
+* Produce new output file based on input file, both files are treated as zip files
+* Takes each XML file inside the input zip and uses StAX parser to read events, transform them and output to new XML file
+* Takes all known Strict OOXML namespaces and maps them to equivalent Transitional OOXML namespace
+* Checks attribute values like Relationship Type="http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument" and modifies the value to be equivalent Transitional OOXML value
+* In xl/workbook.xml, drop the conformance=“strict” attribute on the root element
