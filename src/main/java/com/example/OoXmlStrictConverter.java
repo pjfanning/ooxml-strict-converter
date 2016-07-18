@@ -8,6 +8,7 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -30,18 +31,27 @@ import javax.xml.stream.events.XMLEvent;
 
 public class OoXmlStrictConverter {
 
-    private static final String INPUT_FILENAME = "SimpleStrict.xlsx";
-    private static final String OUTPUT_FILENAME = "Simple.xlsx";
     private static final XMLEventFactory XEF = XMLEventFactory.newInstance();
     private static final XMLInputFactory XIF = XMLInputFactory.newInstance();
     private static final XMLOutputFactory XOF = XMLOutputFactory.newInstance();
 
     public static void main(String[] args) {
         XOF.setProperty(XMLOutputFactory.IS_REPAIRING_NAMESPACES, true);
-        try(ZipInputStream zis = new ZipInputStream(new FileInputStream(INPUT_FILENAME));
-            ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(OUTPUT_FILENAME));) {
+        try {
             Properties mappings = readMappings();
             System.out.println("loaded mappings entries=" + mappings.size());
+            transform("SimpleStrict.xlsx", "Simple.xlsx", mappings);
+            transform("SampleSS.strict.xlsx", "SampleSS.trans.xlsx", mappings);
+            transform("sample.strict.xlsx", "sample.trans.xlsx", mappings);
+            transform("SimpleNormal.xlsx", "SimpleNormal.transformed.xlsx", mappings);
+        } catch(Throwable t) {
+            t.printStackTrace();
+        }
+    }
+    
+    private static void transform(final String inFile, final String outFile, final Properties mappings) throws Exception {
+        try(ZipInputStream zis = new ZipInputStream(new FileInputStream(inFile));
+                ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(outFile));) {
             ZipEntry ze;
             while((ze = zis.getNextEntry()) != null) {
                 ZipEntry newZipEntry = new ZipEntry(ze.getName());
@@ -56,35 +66,52 @@ public class OoXmlStrictConverter {
                     public void close() throws IOException {
                     }
                 };
-                XMLEventReader xer = XIF.createXMLEventReader(filterIs);
-                XMLEventWriter xew = XOF.createXMLEventWriter(filterOs);
-                int depth = 0;
-                while(xer.hasNext()) {
-                    XMLEvent xe = xer.nextEvent();
-                    if(xe.isStartElement()) {
-                        StartElement se = xe.asStartElement();
-                        xe = XEF.createStartElement(updateQName(se.getName(), mappings),
-                                processAttributes(se.getAttributes(), mappings, se.getName().getNamespaceURI(), (depth == 0)),
-                                processNamespaces(se.getNamespaces(), mappings));
-                        depth++;
-                    } else if(xe.isEndElement()) {
-                        EndElement ee = xe.asEndElement();
-                        xe = XEF.createEndElement(updateQName(ee.getName(), mappings),
-                                processNamespaces(ee.getNamespaces(), mappings));
-                        depth--;
+                if(isXml(ze.getName())) {
+                    try {
+                        XMLEventReader xer = XIF.createXMLEventReader(filterIs);
+                        XMLEventWriter xew = XOF.createXMLEventWriter(filterOs);
+                        int depth = 0;
+                        while(xer.hasNext()) {
+                            XMLEvent xe = xer.nextEvent();
+                            if(xe.isStartElement()) {
+                                StartElement se = xe.asStartElement();
+                                xe = XEF.createStartElement(updateQName(se.getName(), mappings),
+                                        processAttributes(se.getAttributes(), mappings, se.getName().getNamespaceURI(), (depth == 0)),
+                                        processNamespaces(se.getNamespaces(), mappings));
+                                depth++;
+                            } else if(xe.isEndElement()) {
+                                EndElement ee = xe.asEndElement();
+                                xe = XEF.createEndElement(updateQName(ee.getName(), mappings),
+                                        processNamespaces(ee.getNamespaces(), mappings));
+                                depth--;
+                            }
+                            xew.add(xe);
+                        }
+                        xer.close();
+                        xew.close();
+                    } catch(Throwable t) {
+                        throw new IOException("Problem paraing " + ze.getName(), t);
                     }
-                    xew.add(xe);
+                } else {
+                    copy(filterIs, filterOs);
                 }
-                xer.close();
-                xew.close();
                 zis.closeEntry();
                 zos.closeEntry();
             }
-        } catch(Throwable t) {
-            t.printStackTrace();
         }
     }
 
+    private static boolean isXml(final String fileName) {
+        if(isNotBlank(fileName)) {
+            int pos = fileName.lastIndexOf(".");
+            if(pos != -1) {
+                String ext = fileName.substring(pos + 1).toLowerCase();
+                return ext.equals("xml") || ext.equals("rels");
+            }
+        }
+        return false;
+    }
+    
     private static final QName CONFORMANCE = new QName("conformance");
     
     private static Iterator<Attribute> processAttributes(final Iterator<Attribute> iter,
@@ -157,5 +184,15 @@ public class OoXmlStrictConverter {
 
     private static boolean isNotBlank(final String str) {
         return !isBlank(str);
+    }
+    
+    private static void copy(InputStream inp, OutputStream out) throws IOException {
+        byte[] buff = new byte[4096];
+        int count;
+        while ((count = inp.read(buff)) != -1) {
+            if (count > 0) {
+                out.write(buff, 0, count);
+            }
+        }
     }
 }
