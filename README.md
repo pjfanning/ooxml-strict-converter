@@ -1,5 +1,5 @@
 # ooxml-strict-converter
-Early prototype code to take Strict OOXML files and save them using the more portable Transitional OOXML format. The ability to save in Strict OOXML format was introduced in Microsoft Office 2013. The aim is to provide a conversion utility that can be used to convert docs so that can be parsed using Apache POI.
+Early prototype code to take Strict OOXML files and save them using the more portable Transitional OOXML format. The ability to save in Strict OOXML format was introduced in Microsoft Office 2013. The aim is to provide a conversion utility that can be used to convert docs so that they can be parsed using Apache POI. https://bz.apache.org/bugzilla/show_bug.cgi?id=57699
 
 When I have fixed a few issues, I will tidy up the code.
 
