@@ -40,16 +40,21 @@ public class OoXmlStrictConverter {
         try {
             Properties mappings = readMappings();
             System.out.println("loaded mappings entries=" + mappings.size());
-            transform("SimpleStrict.xlsx", "Simple.xlsx", mappings);
-            transform("SampleSS.strict.xlsx", "SampleSS.trans.xlsx", mappings);
-            transform("sample.strict.xlsx", "sample.trans.xlsx", mappings);
-            transform("SimpleNormal.xlsx", "SimpleNormal.transformed.xlsx", mappings);
+            if (args.length > 0) {
+                transform(args[0], "transformed.xlsx", mappings);
+            } else {
+                transform("SimpleStrict.xlsx", "Simple.xlsx", mappings);
+                transform("SampleSS.strict.xlsx", "SampleSS.trans.xlsx", mappings);
+                transform("sample.strict.xlsx", "sample.trans.xlsx", mappings);
+                transform("SimpleNormal.xlsx", "SimpleNormal.transformed.xlsx", mappings);
+            }
         } catch(Throwable t) {
             t.printStackTrace();
         }
     }
     
     private static void transform(final String inFile, final String outFile, final Properties mappings) throws Exception {
+        System.out.println("transforming " + inFile + " to " + outFile);
         try(ZipInputStream zis = new ZipInputStream(new FileInputStream(inFile));
                 ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(outFile));) {
             ZipEntry ze;
