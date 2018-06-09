@@ -111,7 +111,7 @@ public class OoXmlStrictConverter {
             int pos = fileName.lastIndexOf(".");
             if(pos != -1) {
                 String ext = fileName.substring(pos + 1).toLowerCase();
-                return ext.equals("xml") || ext.equals("rels");
+                return ext.equals("xml") || ext.equals("vml") || ext.equals("rels");
             }
         }
         return false;
