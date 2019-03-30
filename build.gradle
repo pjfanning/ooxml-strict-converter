@@ -1,0 +1,14 @@
+apply plugin: 'application'
+apply plugin: 'java'
+
+version = '0.1.0'
+
+mainClassName = 'com.example.OoXmlStrictConverter'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+
+}
