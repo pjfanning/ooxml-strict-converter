@@ -59,7 +59,7 @@ public class OoXmlStrictConverterInputStream extends InputStream {
         int readBytes = 0;
 
         while (readBytes < len && hasBytesToRead()) {
-            b[off] = buffer.getBytes()[readIndex];
+            b[off + readBytes] = buffer.getBytes()[readIndex];
             ++readIndex;
             ++readBytes;
         }
@@ -112,6 +112,8 @@ public class OoXmlStrictConverterInputStream extends InputStream {
                 xmlConverter.close();
                 xmlConverter = null;
                 readState = ReadState.BEFORE_ZIP_ENTRY;
+            } else {
+                //System.out.println("S:xmlConverter.convertNextElement()");
             }
         } catch (XMLStreamException e) {
             throw new RuntimeException(e);
@@ -158,6 +160,8 @@ public class OoXmlStrictConverterInputStream extends InputStream {
         zipEntry = input.getNextEntry();
         if (zipEntry == null) {
             readState = ReadState.END_STATE;
+            output.flush();
+            output.close();
             return;
         }
         readState = ReadState.ZIP_ENTRY_START;

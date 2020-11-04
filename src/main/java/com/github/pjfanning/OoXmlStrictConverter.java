@@ -1,6 +1,7 @@
 package com.github.pjfanning;
 
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,9 +22,25 @@ public class OoXmlStrictConverter {
                 transform("SampleSS.strict.xlsx", "SampleSS.trans.xlsx");
                 transform("sample.strict.xlsx", "sample.trans.xlsx");
                 transform("SimpleNormal.xlsx", "SimpleNormal.transformed.xlsx");
+
+                transformUsingStream("SimpleStrict.xlsx", "Simple.trans-stream.xlsx");
+                transformUsingStream("SampleSS.strict.xlsx", "SampleSS.trans-stream.xlsx");
+                transformUsingStream("sample.strict.xlsx", "sample.trans-stream.xlsx");
+                transformUsingStream("SimpleNormal.xlsx", "SimpleNormal.trans-stream.xlsx");
             }
         } catch(Throwable t) {
             t.printStackTrace();
+        }
+    }
+
+    private static void transformUsingStream(String inFile, String outFile)
+            throws IOException {
+        System.out.println("transforming using stream " + inFile + " to " + outFile);
+        try (InputStream in = new FileInputStream(inFile);
+            InputStream translator = new OoXmlStrictConverterInputStream(in);
+            OutputStream out = new FileOutputStream(outFile)) {
+
+            copy(translator, out);
         }
     }
 
@@ -74,7 +91,9 @@ public class OoXmlStrictConverter {
             throws XMLStreamException {
 
         try (XmlConverter xmlConverter = new XmlConverter(is, os)) {
-            while (xmlConverter.convertNextElement()) {}
+            while (xmlConverter.convertNextElement()) {
+                //System.out.println("xmlConverter.convertNextElement()");
+            }
         }
     }
 
