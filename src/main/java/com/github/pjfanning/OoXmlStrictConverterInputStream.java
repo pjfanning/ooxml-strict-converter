@@ -112,8 +112,6 @@ public class OoXmlStrictConverterInputStream extends InputStream {
                 xmlConverter.close();
                 xmlConverter = null;
                 readState = ReadState.BEFORE_ZIP_ENTRY;
-            } else {
-                //System.out.println("S:xmlConverter.convertNextElement()");
             }
         } catch (XMLStreamException e) {
             throw new RuntimeException(e);

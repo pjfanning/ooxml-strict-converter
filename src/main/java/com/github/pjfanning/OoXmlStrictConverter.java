@@ -91,9 +91,7 @@ public class OoXmlStrictConverter {
             throws XMLStreamException {
 
         try (XmlConverter xmlConverter = new XmlConverter(is, os)) {
-            while (xmlConverter.convertNextElement()) {
-                //System.out.println("xmlConverter.convertNextElement()");
-            }
+            while (xmlConverter.convertNextElement()) {}
         }
     }
 
