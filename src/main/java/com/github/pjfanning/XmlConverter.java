@@ -53,6 +53,9 @@ public class XmlConverter implements AutoCloseable {
         } else if(xe.isEndElement()) {
             xew.add(convertEndElement(xe.asEndElement()));
             depth--;
+        } else {
+            // Add as is
+            xew.add(xe);
         }
 
         xew.flush();
