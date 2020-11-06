@@ -1,6 +1,6 @@
 # ooxml-strict-converter
 
-Code moved to https://github.com/pjfanning/excel-streaming-reader
+Code moved to https://github.com/pjfanning/excel-streaming-reader (https://github.com/pjfanning/excel-streaming-reader/pull/21)
 
 This is an early prototype code to take Strict OOXML files and save them using the more portable Transitional OOXML format. The ability to save in Strict OOXML format was introduced in Microsoft Office 2013. The aim is to provide a conversion utility that can be used to convert docs so that they can be parsed using Apache POI. https://bz.apache.org/bugzilla/show_bug.cgi?id=57699
 
